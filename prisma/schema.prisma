@@ -1,0 +1,135 @@
+generator client {
+    provider = "prisma-client-js"
+    previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+    provider = "postgresql"
+    url = env("POSTGRES_DATABASE_URL")
+    extensions = [postgis()]
+}
+
+model User {
+    id Int @id @default(autoincrement())
+    username String? @unique
+    password String?
+    firstName String
+    lastName String
+    birthday DateTime?
+    gender Gender?
+    about String @default("")
+    isActivated Boolean @default(false)
+    profilePhotos ProfilePhoto[]
+    inSearch Boolean @default(true)
+    superLikesAvailable Int @default(1)
+    latitude Float?
+    longitude Float?
+    city String?
+    countryCode String? // ru
+    maritalStatus MaritalStatus?
+    phoneCountryCode String?
+    phoneNumber String?
+    searchPreferences UserSearchPreferences?
+    tokens Token[]
+    createdAt DateTime @default(now())
+
+    // passport js fields
+    vkId Int? @unique
+
+    @@index([latitude, longitude], name: "location_idx")
+}
+
+model ProfilePhoto {
+    id Int @id @default(autoincrement())
+    path String
+    isMain Boolean @default(false)
+    blurHash String
+    userId Int
+    user User @relation(fields: [userId], references: [id])
+    createdAt DateTime @default(now())
+}
+
+model Token {
+    id Int @id @default(autoincrement())
+    token String @unique
+    userId Int
+    user User @relation(fields: [userId], references: [id])
+    createdAt DateTime @default(now())
+}
+
+model UserSearchPreferences {
+    id Int @id
+
+    userId Int @unique
+    user User @relation(fields: [userId], references: [id])
+
+    isAgePrefEnabled Boolean @default(false)
+    minAge Int?
+    maxAge Int?
+
+    isMaritalStatusPrefEnabled Boolean @default(false)
+    maritalStatus MaritalStatus[]
+
+    // kilometers
+    // min - 15
+    // max - 500
+    maxDistance Int @default(15)
+}
+
+model UserReport {
+    id Int @id @default(autoincrement())
+    userId Int
+    creatorId Int
+}
+
+enum ReportType {
+    NSFW
+    SCAM
+}
+
+model Like {
+    id Int @id @default(autoincrement())
+    userId Int
+    userToLikeId Int
+    isHidden Boolean @default(false)
+    createdAt DateTime @default(now())
+
+    @@unique([userId, userToLikeId])
+}
+
+model Dislike {
+    id Int @id @default(autoincrement())
+    userId Int
+    userToDislikeId Int
+    createdAt DateTime @default(now())
+
+    @@unique([userId, userToDislikeId])
+}
+
+model Match {
+    id Int @id @default(autoincrement())
+    userIds Int[] @unique
+    createdAt DateTime @default(now())
+}
+
+enum Gender {
+    MALE
+    FEMALE
+}
+
+enum MaritalStatus {
+    // женат/замужем
+    MARRIED
+    // не женат/не замужем
+    NOT_MARRIED
+    // разведен/разведена
+    DIVORCED
+    // все сложно
+    COMPLICATED
+    // есть друг/есть подруга
+    IN_RELATIONSHIP
+    // влюблен/влюблена
+    IN_LOVE
+    // в активном поиске
+    ACTIVELY_LOOKING
+}
