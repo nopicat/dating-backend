@@ -231,7 +231,8 @@ export class CardsGatewayService {
                 "ProfilePhoto"."path" as "profilePhotoPath",
                 "ProfilePhoto"."blurHash" as "profilePhotoBlurHash"
             FROM "User"
-            INNER JOIN "ProfilePhoto" AS "ProfilePhoto" ON "ProfilePhoto"."userId" = "User"."id" AND "ProfilePhoto"."isMain" = TRUE
+            INNER JOIN "ProfilePhoto" AS "ProfilePhoto" 
+                ON "ProfilePhoto"."userId" = "User"."id" AND "ProfilePhoto"."isMain" = TRUE
             WHERE (
                 "User"."id" NOT IN (${Prisma.join(excludedIds)}) AND
                 ST_DWithIn(
@@ -239,6 +240,8 @@ export class CardsGatewayService {
                     CONCAT('POINT(', "User"."longitude", ' ', "User"."latitude", ')')::geography, 
                     ${userSearchPreferences.maxDistance * 1000}
                 ) AND
+                "User"."isActivated" = TRUE AND
+                "User"."inSearch" = TRUE AND
                 ${
                     userSearchPreferences.isAgePrefEnabled
                         ? Prisma.sql`
@@ -254,6 +257,12 @@ export class CardsGatewayService {
                         )} AND
                     `
                         : Prisma.raw(``)
+                }
+                ${
+                    userSearchPreferences.isGenderPrefEnabled 
+                        ? Prisma.sql`
+                        "User"."gender" = '${Prisma.raw(userSearchPreferences.gender)}' AND
+                    ` : Prisma.raw(``)
                 }
                 ("User"."id") IN (
                     SELECT "_user"."id"
@@ -274,6 +283,9 @@ export class CardsGatewayService {
                             'POINT(${Prisma.raw(`${user.longitude} ${user.latitude}`)})'::geography,
                             CONCAT('POINT(', "_user"."longitude", ' ', "_user"."latitude", ')')::geography,
                             "userSearchPreferences"."maxDistance" * 1000
+                        ) AND (
+                            "userSearchPreferences"."isGenderPrefEnabled" = FALSE OR
+                            "userSearchPreferences"."gender" = '${Prisma.raw(user.gender)}'
                         )
                     )
                 )
